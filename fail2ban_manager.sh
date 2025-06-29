@@ -17,6 +17,7 @@ print_logo() {
   echo -e "\nПриватное сообщество о нодах Profit Nodes - https://t.me/ProfitNodes_bot"
 }
 
+
 pause() {
     read -n1 -rsp "Нажмите любую клавишу для продолжения..." key
     echo
