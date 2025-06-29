@@ -1,144 +1,171 @@
 #!/bin/bash
-
-bash <(curl -s https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/logo_new.sh)
+# Fail2ban Manager: Интерактивная установка, настройка, управление jail для SSH
 
 JAIL_LOCAL="/etc/fail2ban/jail.local"
 
+print_logo() {
+    echo -e "\033[0;35m"
+    echo -e ' ███████████  ███████████  ███████  '
+    echo -e '░░███░░░░░███░░███░░░░░███░░░░░███ '
+    echo -e ' ░███    ░███ ░███    ░███   ░███  '
+    echo -e ' ░██████████  ░██████████   ███    '
+    echo -e ' ░███░░░░░░   ░███░░░░░███ ░░░     '
+    echo -e ' ░███         ░███    ░███         '
+    echo -e ' █████        █████   █████        '
+    echo -e '░░░░░        ░░░░░   ░░░░░         '
+    echo -e "\033[0m"
+    echo -e "Fail2ban SSH Manager — https://t.me/ProfitNodes_bot"
+    echo
+}
+
+pause() {
+    read -n1 -rsp "Нажмите любую клавишу для продолжения..." key
+    echo
+}
+
+confirm() {
+    read -p "$1 [y/N]: " ans
+    [[ "$ans" =~ ^([yY][eE][sS]|[yY])$ ]]
+}
+
 install_fail2ban() {
-    bash <(curl -s https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/logo_new.sh)
-    bash <(curl -s https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/auth_log.sh)
-    
     echo "🔍 Проверка наличия Fail2ban..."
-    if dpkg -l | grep -q fail2ban; then
-        echo "⚠️ Fail2ban уже установлен. Пропускаем установку."
+    if dpkg -l | grep -qw fail2ban; then
+        echo "⚠️ Fail2ban уже установлен."
     else
         echo "🛠️ Установка Fail2ban..."
-        sudo apt update
-        sudo apt install -y fail2ban
-        echo "✅ Fail2ban успешно установлен."
+        sudo apt update && sudo apt install -y fail2ban
+        if [[ $? -eq 0 ]]; then
+            echo "✅ Fail2ban установлен."
+        else
+            echo "❌ Ошибка установки Fail2ban."
+            exit 1
+        fi
     fi
+    sudo systemctl enable --now fail2ban
 }
 
 create_jail_local() {
-    echo -e "\n📁 Создание конфигурационного файла $JAIL_LOCAL..."
-    cat <<EOL > $JAIL_LOCAL
+    if [[ ! -f $JAIL_LOCAL ]]; then
+        echo -e "Создание базовой конфигурации jail.local..."
+        sudo tee $JAIL_LOCAL >/dev/null <<EOL
 [sshd]
 enabled = true
 port = ssh
 filter = sshd
 logpath = /var/log/auth.log
 maxretry = 3
-findtime = 6000
+findtime = 3600
 bantime = -1
 EOL
-
-    echo "✅ Конфигурация для sshd создана."
+        echo "✅ jail.local создан."
+    else
+        echo "⚠️ jail.local уже существует."
+    fi
 }
 
 restart_fail2ban() {
-    echo -e "\n🔄 Перезапуск Fail2ban..."
-    systemctl restart fail2ban
-    if systemctl is-active --quiet fail2ban; then
+    echo "🔄 Перезапуск Fail2ban..."
+    sudo systemctl restart fail2ban
+    if sudo systemctl is-active --quiet fail2ban; then
         echo "✅ Fail2ban успешно запущен."
     else
-        echo "❌ Ошибка: Fail2ban не удалось запустить. Проверьте конфигурацию."
+        echo "❌ Ошибка: Fail2ban не удалось запустить. Проверьте конфиг."
         exit 1
     fi
 }
 
-view_ignore_ip() {
-    echo "📋 Текущий список исключений (ignoreip):"
-    grep -oP '(?<=ignoreip = ).*' "$JAIL_LOCAL"
+change_settings() {
+    echo "⚙️ Текущие настройки:"
+    grep -E "maxretry|findtime|bantime" $JAIL_LOCAL
+
+    read -p "maxretry (попыток до бана) [3]: " maxretry
+    read -p "findtime (секунд, период) [3600]: " findtime
+    read -p "bantime (секунд, время бана, -1=навсегда) [-1]: " bantime
+
+    maxretry=${maxretry:-3}
+    findtime=${findtime:-3600}
+    bantime=${bantime:--1}
+
+    sudo sed -i "s/^maxretry *=.*/maxretry = $maxretry/" $JAIL_LOCAL
+    sudo sed -i "s/^findtime *=.*/findtime = $findtime/" $JAIL_LOCAL
+    sudo sed -i "s/^bantime *=.*/bantime = $bantime/" $JAIL_LOCAL
+    echo "✅ Настройки применены."
+
+    restart_fail2ban
 }
 
-add_ignore_ip() {
-    local ip
-    view_ignore_ip
-    read -rp "Введите IP-адрес для добавления в исключения: " ip
+view_ignoreip() {
+    echo "📋 Текущий список ignoreip:"
+    grep -m1 "^ignoreip" $JAIL_LOCAL || echo "(не задано)"
+}
 
-    if grep -q "ignoreip" "$JAIL_LOCAL"; then
-        if grep -q "ignoreip.*$ip" "$JAIL_LOCAL"; then
-            echo "⚠️ IP-адрес $ip уже есть в списке исключений."
+add_ignoreip() {
+    view_ignoreip
+    read -p "Введите IP для добавления в ignoreip: " ip
+    if grep -q "^ignoreip" $JAIL_LOCAL; then
+        if grep -q "$ip" $JAIL_LOCAL; then
+            echo "⚠️ Этот IP уже есть в списке."
         else
-            sed -i "/ignoreip/c\ignoreip = $(grep -oP '(?<=ignoreip = ).*' $JAIL_LOCAL) $ip" "$JAIL_LOCAL"
-            echo "✅ IP-адрес $ip добавлен в список исключений."
+            sudo sed -i "s/^ignoreip *=.*/& $ip/" $JAIL_LOCAL
+            echo "✅ IP $ip добавлен в ignoreip."
         fi
     else
-        echo "ignoreip = $ip" >> "$JAIL_LOCAL"
-        echo "✅ Добавлено поле ignoreip с IP-адресом $ip."
+        echo "ignoreip = $ip" | sudo tee -a $JAIL_LOCAL
+        echo "✅ ignoreip добавлен в jail.local."
     fi
     restart_fail2ban
 }
 
-remove_ignore_ip() {
-    local ip
-    view_ignore_ip
-    read -rp "Введите IP-адрес для удаления из исключений: " ip
-    if grep -q "ignoreip.*$ip" "$JAIL_LOCAL"; then
-        sed -i "/ignoreip/c\ignoreip = $(grep -oP '(?<=ignoreip = ).*' $JAIL_LOCAL | sed "s/\b$ip\b//g" | xargs)" "$JAIL_LOCAL"
-        echo "✅ IP-адрес $ip удален из списка исключений."
+remove_ignoreip() {
+    view_ignoreip
+    read -p "Введите IP для удаления из ignoreip: " ip
+    if grep -q "^ignoreip" $JAIL_LOCAL && grep -q "$ip" $JAIL_LOCAL; then
+        new_ips=$(grep "^ignoreip" $JAIL_LOCAL | sed "s/$ip//g" | tr -s ' ')
+        sudo sed -i "s/^ignoreip.*/$new_ips/" $JAIL_LOCAL
+        echo "✅ IP $ip удалён из ignoreip."
         restart_fail2ban
     else
-        echo "⚠️ IP-адрес $ip не найден в списке исключений."
+        echo "⚠️ IP не найден в списке ignoreip."
     fi
-}
-
-check_jail_status() {
-    echo -e "\nℹ️ Проверка статуса jail sshd..."
-    fail2ban-client status sshd
-}
-
-change_settings() {
-    echo -e "\n⚙️ Изменение настроек джейла sshd:"
-
-    read -rp "Введите количество попыток перед блокировкой (maxretry) [3]: " maxretry
-    read -rp "Введите время отслеживания (findtime, в секундах) [3600]: " findtime
-    read -rp "Введите время блокировки (bantime, по умолчанию -1 для постоянной блокировки): " bantime
-
-    maxretry="${maxretry:-3}"
-    findtime="${findtime:-3600}"
-    bantime="${bantime:--1}"
-
-    sed -i "/maxretry/c\maxretry = $maxretry" "$JAIL_LOCAL"
-    sed -i "/findtime/c\findtime = $findtime" "$JAIL_LOCAL"
-    sed -i "/bantime/c\bantime = $bantime" "$JAIL_LOCAL"
-
-    echo -e "\n✅ Новые параметры сохранены в $JAIL_LOCAL:"
-    echo "maxretry = $maxretry, findtime = $findtime, bantime = $bantime"
-
-    restart_fail2ban
 }
 
 unban_ip() {
-    local ip
-    read -rp "Введите IP-адрес для разблокировки: " ip
+    sudo fail2ban-client status sshd 2>/dev/null | grep 'Banned IP' || echo "Нет забаненных IP."
+    read -p "Введите IP для разблокировки: " ip
+    sudo fail2ban-client unban $ip
+    echo "✅ IP $ip разблокирован."
+}
 
-    echo "🔍 Проверка и разблокировка IP $ip..."
-    if fail2ban-client status sshd | grep -q "$ip"; then
-        fail2ban-client unban "$ip"
-        echo "✅ IP-адрес $ip успешно разблокирован."
-    else
-        echo "⚠️ IP-адрес $ip не найден в списке заблокированных."
-    fi
+check_status() {
+    echo "ℹ️ Статус jail sshd:"
+    sudo fail2ban-client status sshd
+}
+
+show_auth_success() {
+    sudo grep "Accepted password" /var/log/auth.log | tail -20
 }
 
 show_menu() {
-    echo -e "\n==============================="
-    echo "    Выберите действие:"
-    echo "==============================="
-    echo "1. 🛠 Установка Fail2ban"
-    echo "2. ⚙️ Изменение настроек блокировки"
-    echo "3. 🔓 Разблокировка IP адреса"
-    echo "4. ➕ Добавить IP в список исключения"
-    echo "5. ➖ Удалить IP из списка исключений"
-    echo "6. 📋 Просмотр списка исключений"
-    echo "8. 📊 Проверка статуса jail sshd"
-    echo "9. 🔍 Просмотр успешных попыток входа"
+    print_logo
+    echo "========== Fail2ban Manager =========="
+    echo "1. 🛠 Установка и настройка Fail2ban"
+    echo "2. ⚙️ Изменить параметры защиты (maxretry, findtime, bantime)"
+    echo "3. 🔓 Разблокировать IP"
+    echo "4. ➕ Добавить IP в исключения (ignoreip)"
+    echo "5. ➖ Удалить IP из исключений"
+    echo "6. 📋 Просмотреть ignoreip"
+    echo "7. 🔄 Перезапустить Fail2ban"
+    echo "8. 📊 Статус jail sshd"
+    echo "9. 🔍 Последние успешные входы по SSH"
     echo "0. 🚪 Выход"
-    echo "==============================="
-    read -rp "Ваш выбор: " choice
-    echo ""
-    case $choice in
+    echo "======================================"
+    read -p "Выбор: " act
+}
+
+while true; do
+    show_menu
+    case "$act" in
         1)
             install_fail2ban
             create_jail_local
@@ -147,38 +174,33 @@ show_menu() {
         2)
             change_settings
             ;;
-        3) 
+        3)
             unban_ip
             ;;
         4)
-            add_ignore_ip
+            add_ignoreip
             ;;
         5)
-            remove_ignore_ip
+            remove_ignoreip
             ;;
         6)
-            view_ignore_ip
+            view_ignoreip
+            ;;
+        7)
+            restart_fail2ban
             ;;
         8)
-            check_jail_status
+            check_status
             ;;
-        9) 
-            sudo grep "Accepted password" /var/log/auth.log
+        9)
+            show_auth_success
             ;;
         0)
-            echo "👋 Выход..."
-            exit 0
+            echo "Выход."; exit 0
             ;;
         *)
-            echo "❌ Неверный выбор, попробуйте снова."
+            echo "❌ Неизвестная команда!"
             ;;
     esac
-}
-
-main() {
-    while true; do
-        show_menu
-    done
-}
-
-main
+    pause
+done
