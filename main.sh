@@ -32,7 +32,7 @@ while true; do
             bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/fail2ban_manager.sh")
             ;;
         3)
-            bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/install_btop.sh")
+            bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/install_btop")
             ;;
         0)
             echo "👋 Выход."
