@@ -19,6 +19,7 @@ while true; do
     echo "========= 🛡️ SERVER TOOLKIT ========="
     echo "1) System Cleaner & Log Manager"
     echo "2) Fail2ban Manager (SSH)"
+    echo "3) Установить btop++ (графический монитор ресурсов)"
     echo "0) Выйти"
     echo "====================================="
     read -rp "Выберите раздел: " main_choice
@@ -29,6 +30,9 @@ while true; do
             ;;
         2)
             bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/fail2ban_manager.sh")
+            ;;
+        3)
+            bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/install_btop.sh")
             ;;
         0)
             echo "👋 Выход."
