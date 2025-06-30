@@ -1,0 +1,42 @@
+#!/bin/bash
+
+set -e
+
+echo "📦 Скачиваем последнюю сборку btop++..."
+wget -q --show-progress https://github.com/aristocratos/btop/releases/latest/download/btop-x86_64-linux-musl.tbz
+
+echo "📦 Распаковываем архив..."
+tar -xvjf btop-x86_64-linux-musl.tbz >/dev/null
+
+cd btop || { echo "❌ Не удалось перейти в папку btop"; exit 1; }
+
+echo "🔧 Устанавливаем btop++..."
+sudo make install
+
+echo "✅ Установка завершена"
+
+# Проверка версии
+echo
+btop --version
+echo
+
+# Создание конфига, если ещё нет
+mkdir -p ~/.config/btop
+if [ ! -f ~/.config/btop/btop.conf ]; then
+    echo "🧰 Первый запуск для генерации конфига..."
+    btop --help >/dev/null
+fi
+
+# Установка темы Candy
+echo "🎨 Включаем тему Candy..."
+sed -i 's/^color_theme = .*/color_theme = "Candy"/' ~/.config/btop/btop.conf
+
+# Установка самой темы (если не установилась)
+if [ ! -f /usr/share/btop/themes/candy.theme ]; then
+    echo "⬇️ Скачиваем тему candy..."
+    sudo wget -q https://raw.githubusercontent.com/aristocratos/btop/main/themes/candy.theme -O /usr/share/btop/themes/candy.theme
+fi
+
+echo
+echo "🚀 Запускаем btop!"
+btop
