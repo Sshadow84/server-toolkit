@@ -24,7 +24,7 @@ echo
 mkdir -p ~/.config/btop
 if [ ! -f ~/.config/btop/btop.conf ]; then
     echo "🧰 Первый запуск для генерации конфига..."
-    btop --help >/dev/null
+    timeout 2s btop >/dev/null 2>&1 || true
 fi
 
 # Установка темы Candy
@@ -38,5 +38,6 @@ if [ ! -f /usr/share/btop/themes/candy.theme ]; then
 fi
 
 echo
-echo "🚀 Запускаем btop!"
-btop
+echo "🚀 Установка завершена!"
+echo "👉 Для запуска мониторинга введите: btop"
+echo "❌ Для выхода нажмите Ctrl+C внутри btop"
