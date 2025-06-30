@@ -49,6 +49,8 @@ else
     echo "❗ Не удалось найти btop.conf, тема не установлена"
 fi
 
+exec 1>/dev/tty 2>/dev/tty
+
 echo
 echo "🚀 Btop++ установлен!"
 echo "👉 Для запуска мониторинга: btop"
