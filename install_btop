@@ -12,7 +12,6 @@ cd btop || { echo "❌ Не удалось перейти в папку btop"; e
 
 echo "🔧 Устанавливаем btop++..."
 sudo make install
-
 echo "✅ Установка завершена"
 
 # Проверка версии
@@ -20,24 +19,34 @@ echo
 btop --version
 echo
 
-# Создание конфига, если ещё нет
+# Создание конфига
+echo "🧰 Первый запуск для генерации конфига..."
 mkdir -p ~/.config/btop
-if [ ! -f ~/.config/btop/btop.conf ]; then
-    echo "🧰 Первый запуск для генерации конфига..."
-    timeout 2s btop >/dev/null 2>&1 || true
-fi
+timeout 2s btop >/dev/null 2>&1 || true
+
+# ⏳ Подождать генерацию btop.conf, до 5 секунд
+for i in {1..5}; do
+    if [ -f ~/.config/btop/btop.conf ]; then
+        break
+    fi
+    sleep 1
+done
 
 # Установка темы Candy
-echo "🎨 Включаем тему Candy..."
-sed -i 's/^color_theme = .*/color_theme = "Candy"/' ~/.config/btop/btop.conf
+if [ -f ~/.config/btop/btop.conf ]; then
+    echo "🎨 Включаем тему Candy..."
+    sed -i 's/^color_theme = .*/color_theme = "Candy"/' ~/.config/btop/btop.conf
+else
+    echo "⚠️ Не удалось найти btop.conf, тема не установлена"
+fi
 
-# Установка самой темы (если не установилась)
+# Установка темы Candy в /usr/share
 if [ ! -f /usr/share/btop/themes/candy.theme ]; then
     echo "⬇️ Скачиваем тему candy..."
     sudo wget -q https://raw.githubusercontent.com/aristocratos/btop/main/themes/candy.theme -O /usr/share/btop/themes/candy.theme
 fi
 
 echo
-echo "🚀 Установка завершена!"
-echo "👉 Для запуска мониторинга введите: btop"
-echo "❌ Для выхода нажмите Ctrl+C внутри btop"
+echo "🚀 Btop++ установлен!"
+echo "👉 Для запуска: btop"
+echo "❌ Выход: Ctrl+C"
