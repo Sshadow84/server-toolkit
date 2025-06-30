@@ -23,13 +23,13 @@ mkdir -p ~/.config/btop
 if [ ! -f ~/.config/btop/btop.conf ]; then
     echo "🧰 Первый запуск для генерации конфига..."
     ( btop >/dev/null 2>&1 & )
-    for i in {1..10}; do
-        sleep 0.5
+    for i in {1..20}; do
+        sleep 1
         if [ -f ~/.config/btop/btop.conf ]; then
             pkill -f "btop"
             break
         fi
-        [ "$i" = 10 ] && pkill -f "btop"
+        [ "$i" = 20 ] && pkill -f "btop"
     done
 fi
 
@@ -44,7 +44,7 @@ if [ -f ~/.config/btop/btop.conf ]; then
         sudo wget -q https://raw.githubusercontent.com/aristocratos/btop/main/themes/candy.theme -O "$THEME_DIR/candy.theme"
     fi
 else
-    echo "❗ Не удалось найти btop.conf, тема не установлена"
+    echo "⚠️ Не удалось сгенерировать btop.conf, продолжайте вручную при первом запуске btop!"
 fi
 
 # === Финальный блок с меткой ===
