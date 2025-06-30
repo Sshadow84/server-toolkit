@@ -29,7 +29,6 @@ if [ ! -f ~/.config/btop/btop.conf ]; then
             pkill -f "btop"
             break
         fi
-        # если на 10й раз не сработало — принудительно завершить все btop
         [ "$i" = 10 ] && pkill -f "btop"
     done
 fi
@@ -39,7 +38,6 @@ THEME_DIR="/usr/local/share/btop/themes"
 if [ -f ~/.config/btop/btop.conf ]; then
     echo "🎨 Включаем тему Candy..."
     sed -i 's/^color_theme = .*/color_theme = "Candy"/' ~/.config/btop/btop.conf
-    # Подстраховка — если самой темы нет, скачиваем её
     if [ ! -f "$THEME_DIR/candy.theme" ]; then
         echo "⬇️ Скачиваем тему Candy..."
         sudo mkdir -p "$THEME_DIR"
@@ -49,12 +47,11 @@ else
     echo "❗ Не удалось найти btop.conf, тема не установлена"
 fi
 
-exec 1>/dev/tty 2>/dev/tty
-
+# === Финальный блок с меткой ===
+echo "===BTOP-INSTALL-INFO==="
 echo
 echo "🚀 Btop++ установлен!"
 echo "👉 Для запуска мониторинга: btop"
 echo "❌ Для выхода из btop: Ctrl + C"
 echo
-read -n 1 -s -r -p "Нажмите любую клавишу для возврата в меню..."
-echo
+echo "======================="
