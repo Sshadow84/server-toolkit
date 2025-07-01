@@ -32,11 +32,14 @@ while true; do
             bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/fail2ban_manager.sh")
             ;;
         3)
-            tmpfile=$(mktemp)
-            curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/install_btop" -o "$tmpfile"
-            chmod +x "$tmpfile"
-            bash "$tmpfile"
-            rm -f "$tmpfile"
+            # Чистим предыдущий лог
+            rm -f /tmp/btop_install_log
+            bash <(curl -sL "https://raw.githubusercontent.com/Sshadow84/server-toolkit/main/install_btop.sh")
+            echo
+            cat /tmp/btop_install_log
+            echo
+            read -n 1 -s -r -p "Нажмите любую клавишу для возврата в меню..."
+            echo
             ;;
         0)
             echo "👋 Выход."
