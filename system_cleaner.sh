@@ -106,10 +106,39 @@ clear_cache() {
     fi
 }
 
+run_safe_mode() {
+    setup_logrotate
+    setup_journald
+    install_rsyslog
+    clear_docker
+    delete_archives
+    clear_cache
+    echo "✅ Safe Mode завершён."
+}
+
 main_menu() {
     while true; do
         echo ""
-        echo "========= 🧹 UNIVERSAL SYSTEM CLEANER ========="
+        echo "========= 🧹 SYSTEM CLEANER ========="
+        echo "1) 🧼 Быстрая очистка (Safe Mode: всё сразу)"
+        echo "2) ⚙️ Расширенные настройки"
+        echo "0) Назад"
+        echo "====================================="
+        read -rp "Выберите действие: " choice
+
+        case "$choice" in
+            1) run_safe_mode ;;
+            2) advanced_menu ;;
+            0) echo "Выход в главное меню."; exit 0 ;;
+            *) echo "❌ Неверный выбор. Попробуйте снова." ;;
+        esac
+    done
+}
+
+advanced_menu() {
+    while true; do
+        echo ""
+        echo "========= 🧠 РАСШИРЕННЫЕ НАСТРОЙКИ ========="
         echo "1) Настроить logrotate"
         echo "2) Настроить journald"
         echo "3) Установить rsyslog"
@@ -117,12 +146,11 @@ main_menu() {
         echo "5) Очистить Docker"
         echo "6) Удалить архивы"
         echo "7) Очистить системный кэш"
-        echo "8) Выполнить всё сразу (Safe Mode)"
-        echo "0) Выйти"
-        echo "==============================================="
-        read -rp "Выберите действие: " choice
+        echo "0) Назад"
+        echo "==========================================="
+        read -rp "Выберите действие: " opt
 
-        case "$choice" in
+        case "$opt" in
             1) setup_logrotate ;;
             2) setup_journald ;;
             3) install_rsyslog ;;
@@ -130,15 +158,7 @@ main_menu() {
             5) clear_docker ;;
             6) delete_archives ;;
             7) clear_cache ;;
-            8)
-                setup_logrotate
-                setup_journald
-                install_rsyslog
-                clear_docker
-                delete_archives
-                clear_cache
-                ;;
-            0) echo "Выход."; exit 0 ;;
+            0) break ;;
             *) echo "❌ Неверный выбор. Попробуйте снова." ;;
         esac
     done
