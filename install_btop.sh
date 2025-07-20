@@ -1,11 +1,14 @@
 #!/bin/bash
-# Логировать всё сразу в файл и в stdout
+# Логирование
 exec > >(tee /tmp/btop_install_log) 2>&1
-
 set -e
 
 echo "📦 Скачиваем последнюю сборку btop++..."
 wget -q --show-progress https://github.com/aristocratos/btop/releases/latest/download/btop-x86_64-linux-musl.tbz
+
+echo "📦 Устанавливаем bzip2 (если не установлен)..."
+sudo apt update
+sudo apt install -y bzip2
 
 echo "📦 Распаковываем архив..."
 tar -xvjf btop-x86_64-linux-musl.tbz >/dev/null
@@ -21,7 +24,7 @@ echo
 btop --version
 echo
 
-# 🧰 Первый запуск для генерации конфига (запускаем btop в фоне, ждем появления файла)
+# 🧰 Первый запуск для генерации конфига
 mkdir -p ~/.config/btop
 if [ ! -f ~/.config/btop/btop.conf ]; then
     echo "🧰 Первый запуск для генерации конфига..."
@@ -36,7 +39,7 @@ if [ ! -f ~/.config/btop/btop.conf ]; then
     done
 fi
 
-# Установка темы Candy (только если конфиг реально есть)
+# 🎨 Установка темы Candy
 THEME_DIR="/usr/local/share/btop/themes"
 if [ -f ~/.config/btop/btop.conf ]; then
     echo "🎨 Включаем тему Candy..."
@@ -47,14 +50,13 @@ if [ -f ~/.config/btop/btop.conf ]; then
         sudo wget -q https://raw.githubusercontent.com/aristocratos/btop/main/themes/candy.theme -O "$THEME_DIR/candy.theme"
     fi
 else
-    echo "⚠️ Не удалось сгенерировать btop.conf, продолжайте вручную при первом запуске btop!"
+    echo "⚠️ Не удалось сгенерировать btop.conf. Настройте вручную при первом запуске!"
 fi
 
 echo
 echo "🚀 Btop++ установлен!"
-echo "👉 Для запуска мониторинга: btop"
-echo "❌ Для выхода из btop: Ctrl + C"
+echo "👉 Запуск: btop"
+echo "❌ Выход: Ctrl + C"
 echo
 
-# Просто завершаем скрипт — всё уже залогировано и cat-ится в main.sh
 exit 0
